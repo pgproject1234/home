@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin - Blood Donors</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root {
+    --primary: #1d3557;
+    --primary-dark: #14213d;
+    --primary-light: #457b9d;
+    --secondary: #e63946;
+    --secondary-dark: #c1121f;
+    --secondary-light: #f8ad9d;
+    --success: #2a9d8f;
+    --success-dark: #21867a;
+    --light: #f1faee;
+    --white: #ffffff;
+    --gray: #6c757d;
+    --gray-light: #e9ecef;
+    --gray-dark: #495057;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --radius: 8px;
+    --transition: all 0.3s ease;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--primary);
+    color: var(--white);
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+  }
+
+  header::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--primary));
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 1rem auto;
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      margin: 0.5rem;
+      padding: 1rem;
+    }
+  }
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .dashboard-title h1 {
+    color: var(--primary);
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .dashboard-title p {
+    color: var(--gray);
+    font-size: 0.9rem;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .nav-links a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--gray-light);
+    font-size: 0.9rem;
+  }
+
+  .nav-links a:hover {
+    background: var(--primary);
+    color: var(--white);
+  }
+
+  .search-container {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 250px;
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-light);
+    font-size: 1rem;
+    transition: var(--transition);
+    background-color: var(--white);
+  }
+
+  .search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(29, 53, 87, 0.2);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray);
+  }
+
+  .filter-controls {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-controls select {
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-light);
+    font-size: 0.9rem;
+    background-color: var(--white);
+    min-width: 150px;
+  }
+
+  .stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--primary);
+  }
+
+  .stat-card h3 {
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .table-container {
+    overflow-x: auto;
+    margin-bottom: 2rem;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--gray-light);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+  }
+
+  th {
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--gray-light);
+    font-size: 0.85rem;
+  }
+
+  tr:hover {
+    background-color: rgba(29, 53, 87, 0.03);
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .edit-btn {
+    background: var(--success);
+    color: var(--white);
+  }
+
+  .edit-btn:hover {
+    background: var(--success-dark);
+    transform: translateY(-1px);
+  }
+
+  .delete-btn {
+    background: var(--secondary);
+    color: var(--white);
+  }
+
+  .delete-btn:hover {
+    background: var(--secondary-dark);
+    transform: translateY(-1px);
+  }
+
+  .chart-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .chart-section {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .chart-container {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .chart-container h2 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal.show {
+    display: flex;
+  }
+
+  .modal-box {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-box h3 {
+    margin: 0 0 1.5rem;
+    color: var(--primary);
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+    font-size: 0.85rem;
+  }
+
+  input, select {
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-light);
+    font-size: 0.9rem;
+    transition: var(--transition);
+    background-color: var(--white);
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(29, 53, 87, 0.2);
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  .save {
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+  }
+
+  .save:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+
+  .cancel {
+    background: var(--gray-light);
+    color: var(--gray-dark);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+  }
+
+  .cancel:hover {
+    background: var(--gray);
+    color: var(--white);
+    transform: translateY(-1px);
+  }
+
+  .notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--white);
+    box-shadow: var(--shadow);
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+    z-index: 1001;
+    max-width: 350px;
+  }
+
+  .notification.show {
+    transform: translateX(0);
+  }
+
+  .notification.success {
+    background: var(--success);
+  }
+
+  .notification.error {
+    background: var(--secondary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+  }
+
+  .empty-state p {
+    margin-top: 0.5rem;
+  }
+
+  .mobile-card {
+    display: none;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--primary);
+  }
+
+  .mobile-card .card-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gray-light);
+  }
+
+  .mobile-card .card-label {
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .nav-links {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    .stats-cards {
+      grid-template-columns: 1fr 1fr;
+    }
+    
+    .modal-box {
+      padding: 1.25rem;
+    }
+    
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .search-container {
+      flex-direction: column;
+    }
+    
+    .filter-controls {
+      width: 100%;
+    }
+    
+    .filter-controls select {
+      flex: 1;
+    }
+    
+    /* Show mobile cards and hide table on small screens */
+    .table-container {
+      display: none;
+    }
+    
+    .mobile-cards-container {
+      display: block;
+    }
+    
+    .mobile-card {
+      display: block;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stats-cards {
+      grid-template-columns: 1fr;
+    }
+    
+    .actions {
+      flex-direction: column;
+    }
+    
+    header {
+      font-size: 1.1rem;
+      padding: 0.75rem;
+    }
+    
+    .dashboard-title h1 {
+      font-size: 1.25rem;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .mobile-cards-container {
+      display: none;
+    }
+    
+    .table-container {
+      display: block;
+    }
+  }
+</style>
+</head>
+<body>
+<header>🩸 Admin Dashboard - Tamil Nadu Blood Donors</header>
+
+<div class="container">
+  <div class="dashboard-header">
+    <div class="dashboard-title">
+      <h1>Donor Management</h1>
+      <p>Manage and analyze blood donor information</p>
+    </div>
+    <div class="nav-links">
+      <a href="register.html">
+        <span>➕</span> Register Donor
+      </a>
+      <a href="userview.html">
+        <span>🔍</span> View Donors
+      </a>
+    </div>
+  </div>
+
+  <div class="search-container">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search by name, phone, district or blood group...">
+    </div>
+    <div class="filter-controls">
+      <select id="bloodGroupFilter">
+        <option value="">All Blood Groups</option>
+        <option value="A+">A+</option>
+        <option value="A-">A-</option>
+        <option value="B+">B+</option>
+        <option value="B-">B-</option>
+        <option value="AB+">AB+</option>
+        <option value="AB-">AB-</option>
+        <option value="O+">O+</option>
+        <option value="O-">O-</option>
+      </select>
+      <select id="districtFilter">
+        <option value="">All Districts</option>
+        <option value="Chennai">Chennai</option>
+        <option value="Coimbatore">Coimbatore</option>
+        <option value="Madurai">Madurai</option>
+        <option value="Tiruchirappalli">Tiruchirappalli</option>
+        <option value="Salem">Salem</option>
+        <option value="Erode">Erode</option>
+        <option value="Tirunelveli">Tirunelveli</option>
+        <option value="Vellore">Vellore</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="stats-cards">
+    <div class="stat-card">
+      <h3>Total Donors</h3>
+      <div class="value" id="totalDonors">0</div>
+    </div>
+    <div class="stat-card">
+      <h3>Most Common Blood Type</h3>
+      <div class="value" id="commonBloodType">-</div>
+    </div>
+    <div class="stat-card">
+      <h3>Avg. Age</h3>
+      <div class="value" id="avgAge">0</div>
+    </div>
+    <div class="stat-card">
+      <h3>Last Updated</h3>
+      <div class="value" id="lastUpdated">-</div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="adminTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Gender</th>
+          <th>Age</th>
+          <th>Weight</th>
+          <th>Phone</th>
+          <th>Blood Group</th>
+          <th>District</th>
+          <th>Last Donated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Cards View -->
+  <div class="mobile-cards-container" id="mobileCardsContainer"></div>
+
+  <div class="chart-section">
+    <div class="chart-container">
+      <h2>Blood Group Distribution</h2>
+      <div class="chart-wrapper">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h2>Donors by District</h2>
+      <div class="chart-wrapper">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal" role="dialog" aria-hidden="true">
+  <div class="modal-box" role="document">
+    <h3>Edit Donor Information</h3>
+    <form id="editForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="m_name">Full Name</label>
+          <input id="m_name" type="text" placeholder="Full name" required />
+        </div>
+        <div class="form-group">
+          <label for="m_dob">Date of Birth</label>
+          <input id="m_dob" type="date" required />
+        </div>
+        <div class="form-group">
+          <label for="m_gender">Gender</label>
+          <select id="m_gender" required>
+            <option value="">Select Gender</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="m_age">Age</label>
+          <input id="m_age" type="number" required />
+        </div>
+        <div class="form-group">
+          <label for="m_weight">Weight (kg)</label>
+          <input id="m_weight" type="number" step="0.1" required />
+        </div>
+        <div class="form-group">
+          <label for="m_phone">Phone Number</label>
+          <input id="m_phone" type="tel" required />
+        </div>
+        <div class="form-group">
+          <label for="m_bloodGroup">Blood Group</label>
+          <select id="m_bloodGroup" required>
+            <option value="">Select Blood Group</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="m_location">District</label>
+          <input id="m_location" type="text" placeholder="District" required />
+        </div>
+        <div class="form-group">
+          <label for="m_lastDonate">Last Donated Date</label>
+          <input id="m_lastDonate" type="date" required />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cancel" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="save">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="notification" class="notification"></div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAP-hIC2xJJGu5IWDKnChYaeLowiUZR4b4",
+    authDomain: "blood-donate-1b19a.firebaseapp.com",
+    databaseURL: "https://blood-donate-1b19a-default-rtdb.firebaseio.com/",
+    projectId: "blood-donate-1b19a",
+    storageBucket: "blood-donate-1b19a.firebasestorage.app",
+    messagingSenderId: "787629339385",
+    appId: "1:787629339385:web:4f8bad06864682d1886828",
+    measurementId: "G-F9HVYZQ4L9"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const tbody = document.querySelector('#adminTable tbody');
+  const modal = document.getElementById('modal');
+  const editForm = document.getElementById('editForm');
+  const notification = document.getElementById('notification');
+  const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+  const searchInput = document.getElementById('searchInput');
+  const bloodGroupFilter = document.getElementById('bloodGroupFilter');
+  const districtFilter = document.getElementById('districtFilter');
+
+  let donors = []; // array of { id, ... }
+  let filteredDonors = [];
+  let currentId = null;
+  let pieChart = null;
+  let barChart = null;
+  const pieChartCtx = document.getElementById('pieChart');
+  const barChartCtx = document.getElementById('barChart');
+
+  // Show notification function
+  function showNotification(message, type = 'success') {
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+      notification.classList.remove('show');
+    }, 4000);
+  }
+
+  // Filter donors based on search and filters
+  function filterDonors() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const bloodGroup = bloodGroupFilter.value;
+    const district = districtFilter.value;
+    
+    filteredDonors = donors.filter(donor => {
+      const matchesSearch = !searchTerm || 
+        donor.name.toLowerCase().includes(searchTerm) ||
+        donor.phone.includes(searchTerm) ||
+        donor.location.toLowerCase().includes(searchTerm) ||
+        donor.bloodGroup.toLowerCase().includes(searchTerm);
+      
+      const matchesBloodGroup = !bloodGroup || donor.bloodGroup === bloodGroup;
+      const matchesDistrict = !district || donor.location === district;
+      
+      return matchesSearch && matchesBloodGroup && matchesDistrict;
+    });
+    
+    renderRows();
+    updateStats(filteredDonors);
+    updateCharts(filteredDonors);
+  }
+
+  // Update stats cards
+  function updateStats(donors) {
+    document.getElementById('totalDonors').textContent = donors.length;
+    
+    // Calculate most common blood type
+    if (donors.length > 0) {
+      const bloodGroups = donors.map(d => d.bloodGroup || 'Unknown');
+      const counts = bloodGroups.reduce((acc, group) => {
+        acc[group] = (acc[group] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const mostCommon = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, 'Unknown');
+      document.getElementById('commonBloodType').textContent = mostCommon;
+      
+      // Calculate average age
+      const totalAge = donors.reduce((sum, donor) => sum + (parseInt(donor.age) || 0), 0);
+      const avgAge = Math.round(totalAge / donors.length);
+      document.getElementById('avgAge').textContent = avgAge;
+    } else {
+      document.getElementById('commonBloodType').textContent = '-';
+      document.getElementById('avgAge').textContent = '0';
+    }
+    
+    // Update last updated time
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+  }
+
+  // Load data
+  db.ref('donors').on('value', snap => {
+    const val = snap.val() || {};
+    donors = Object.keys(val).map(k => ({ id: k, ...val[k] }));
+    filterDonors();
+  });
+
+  function renderRows() {
+    tbody.innerHTML = '';
+    mobileCardsContainer.innerHTML = '';
+    
+    if (!filteredDonors.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" class="empty-state">
+            <h3>No donor records found</h3>
+            <p>Try adjusting your search or filters</p>
+          </td>
+        </tr>
+      `;
+      
+      mobileCardsContainer.innerHTML = `
+        <div class="empty-state">
+          <h3>No donor records found</h3>
+          <p>Try adjusting your search or filters</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Render table rows
+    filteredDonors.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(d.name)}</td>
+        <td>${escapeHtml(d.gender)}</td>
+        <td>${escapeHtml(d.age)}</td>
+        <td>${escapeHtml(d.weight)} kg</td>
+        <td>${escapeHtml(d.phone)}</td>
+        <td><strong>${escapeHtml(d.bloodGroup)}</strong></td>
+        <td>${escapeHtml(d.location)}</td>
+        <td>${escapeHtml(formatDate(d.lastDonate))}</td>
+        <td class="actions">
+          <button class="edit-btn" onclick="openModal('${d.id}')">Edit</button>
+          <button class="delete-btn" onclick="removeDonor('${d.id}')">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    
+    // Render mobile cards
+    filteredDonors.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'mobile-card';
+      card.innerHTML = `
+        <div class="card-row">
+          <span class="card-label">Name:</span>
+          <span>${escapeHtml(d.name)}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">Blood Group:</span>
+          <span><strong>${escapeHtml(d.bloodGroup)}</strong></span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">Phone:</span>
+          <span>${escapeHtml(d.phone)}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">District:</span>
+          <span>${escapeHtml(d.location)}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">Last Donated:</span>
+          <span>${escapeHtml(formatDate(d.lastDonate))}</span>
+        </div>
+        <div class="actions" style="margin-top: 0.75rem;">
+          <button class="edit-btn" onclick="openModal('${d.id}')">Edit</button>
+          <button class="delete-btn" onclick="removeDonor('${d.id}')">Delete</button>
+        </div>
+      `;
+      mobileCardsContainer.appendChild(card);
+    });
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN');
+  }
+
+  function openModal(id) {
+    currentId = id;
+    const donor = donors.find(x => x.id === id);
+    if (!donor) {
+      showNotification('Donor not found', 'error');
+      return;
+    }
+    
+    document.getElementById('m_name').value = donor.name || '';
+    document.getElementById('m_dob').value = donor.dob || '';
+    document.getElementById('m_gender').value = donor.gender || '';
+    document.getElementById('m_age').value = donor.age || '';
+    document.getElementById('m_weight').value = donor.weight || '';
+    document.getElementById('m_phone').value = donor.phone || '';
+    document.getElementById('m_bloodGroup').value = donor.bloodGroup || '';
+    document.getElementById('m_location').value = donor.location || '';
+    document.getElementById('m_lastDonate').value = donor.lastDonate || '';
+    
+    modal.classList.add('show');
+  }
+  
+  function closeModal() { 
+    modal.classList.remove('show'); 
+    currentId = null; 
+  }
+
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentId) {
+      showNotification('No donor selected', 'error');
+      return;
+    }
+
+    // Show loading state
+    const submitBtn = editForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+    submitBtn.disabled = true;
+
+    const updated = {
+      name: document.getElementById('m_name').value.trim(),
+      dob: document.getElementById('m_dob').value,
+      gender: document.getElementById('m_gender').value,
+      age: parseInt(document.getElementById('m_age').value || '0', 10),
+      weight: parseFloat(document.getElementById('m_weight').value || '0'),
+      phone: document.getElementById('m_phone').value.trim(),
+      bloodGroup: document.getElementById('m_bloodGroup').value,
+      location: document.getElementById('m_location').value.trim(),
+      lastDonate: document.getElementById('m_lastDonate').value
+    };
+
+    try {
+      await db.ref('donors/' + currentId).set(updated);
+      showNotification('Donor information updated successfully');
+      closeModal();
+    } catch (err) {
+      console.error('Update error', err);
+      showNotification('Update failed. Please try again.', 'error');
+    } finally {
+      // Restore button state
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+
+  window.removeDonor = function(id) {
+    if (!confirm('Are you sure you want to delete this donor record? This action cannot be undone.')) return;
+    
+    db.ref('donors/' + id).remove().then(() => {
+      showNotification('Donor record deleted successfully');
+    }).catch(err => {
+      console.error('Remove error', err);
+      showNotification('Delete failed. Please try again.', 'error');
+    });
+  };
+
+  function updateCharts(list) {
+    // Blood Group Distribution (Pie Chart)
+    const bloodGroupCounts = list.reduce((acc, d) => { 
+      const g = d.bloodGroup || 'Unknown'; 
+      acc[g] = (acc[g] || 0) + 1; 
+      return acc; 
+    }, {});
+    
+    const bloodGroupLabels = Object.keys(bloodGroupCounts);
+    const bloodGroupData = Object.values(bloodGroupCounts);
+    
+    // Professional color palette for blood groups
+    const bloodGroupColors = {
+      'A+': '#1d3557',
+      'A-': '#457b9d',
+      'B+': '#e63946',
+      'B-': '#f4a261',
+      'AB+': '#2a9d8f',
+      'AB-': '#a8dadc',
+      'O+': '#e76f51',
+      'O-': '#264653',
+      'Unknown': '#6c757d'
+    };
+    
+    const pieChartColors = bloodGroupLabels.map(label => bloodGroupColors[label] || '#6c757d');
+    
+    if (pieChart) pieChart.destroy();
+    
+    pieChart = new Chart(pieChartCtx, {
+      type: 'pie',
+      data: { 
+        labels: bloodGroupLabels, 
+        datasets: [{ 
+          data: bloodGroupData, 
+          backgroundColor: pieChartColors,
+          borderColor: '#fff',
+          borderWidth: 2
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              font: {
+                size: 12
+              },
+              padding: 15
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.raw || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = Math.round((value / total) * 100);
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // District Distribution (Bar Chart)
+    const districtCounts = list.reduce((acc, d) => { 
+      const district = d.location || 'Unknown'; 
+      acc[district] = (acc[district] || 0) + 1; 
+      return acc; 
+    }, {});
+    
+    // Sort districts by count (descending) and take top 8
+    const sortedDistricts = Object.entries(districtCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+    
+    const districtLabels = sortedDistricts.map(item => item[0]);
+    const districtData = sortedDistricts.map(item => item[1]);
+    
+    if (barChart) barChart.destroy();
+    
+    barChart = new Chart(barChartCtx, {
+      type: 'bar',
+      data: { 
+        labels: districtLabels, 
+        datasets: [{ 
+          label: 'Number of Donors', 
+          data: districtData, 
+          backgroundColor: '#1d3557',
+          borderColor: '#1d3557',
+          borderWidth: 1
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        scales: { 
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          } 
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  function escapeHtml(s) { 
+    if(s == null) return ''; 
+    return String(s).replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m])); 
+  }
+
+  // Close modal on outside click
+  modal.addEventListener('click', (ev) => { 
+    if (ev.target === modal) closeModal(); 
+  });
+
+  // Set up search and filter event listeners
+  searchInput.addEventListener('input', filterDonors);
+  bloodGroupFilter.addEventListener('change', filterDonors);
+  districtFilter.addEventListener('change', filterDonors);
+
+  // Set maximum date for last donation (today)
+  document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const lastDonateInput = document.getElementById('m_lastDonate');
+    if (lastDonateInput) {
+      lastDonateInput.max = today.toISOString().split('T')[0];
+    }
+    
+    // Auto-calculate age from date of birth
+    const dobInput = document.getElementById('m_dob');
+    if (dobInput) {
+      dobInput.addEventListener('change', function() {
+        const birthDate = new Date(this.value);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        document.getElementById('m_age').value = age;
+      });
+    }
+  });
+</script>
+</body>
+</html>
